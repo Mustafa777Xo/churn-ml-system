@@ -29,7 +29,7 @@ def clean_data(df: pd.DataFrame, training: bool = True) -> pd.DataFrame:
     return df
 
 
-def load_clean_data(path: Path = DEFAULT_RAW_PATH, training:bool = True, save_path: Path | None = None) -> pd.DataFrame: 
+def load_clean_data(path: Path = DEFAULT_RAW_PATH, training: bool = True, save_path: Path | None = None) -> pd.DataFrame:
     df = load_raw_data(path)
     df = clean_data(df, training=training)
 
@@ -37,4 +37,3 @@ def load_clean_data(path: Path = DEFAULT_RAW_PATH, training:bool = True, save_pa
         df.to_parquet(save_path, index=False)
 
     return df
-

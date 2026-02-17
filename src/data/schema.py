@@ -42,6 +42,7 @@ ALLOWED_VALUES: Dict[str, Set[str]] = {
     "StreamingMovies": {"No", "Yes", "No internet service"},
     "Contract": {"Month-to-month", "One year", "Two year"},
     "PaperlessBilling": {"Yes", "No"},
+    "SeniorCitizen": {0, 1},
     "PaymentMethod": {
         "Electronic check",
         "Mailed check",

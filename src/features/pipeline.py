@@ -48,8 +48,6 @@ categorical_pipeline = Pipeline(
 )
 
 # Column Transformer builder
-
-
 def build_preprocess_pipeline() -> ColumnTransformer:
     return ColumnTransformer(
         transformers=[

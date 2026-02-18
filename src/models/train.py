@@ -17,6 +17,8 @@ from sklearn.pipeline import Pipeline
 from src.data.load import load_clean_data
 from src.features.pipeline import build_preprocess_pipeline
 
+import argparse
+
 
 # model path and version
 MODELS_DIR = Path("models")
@@ -34,7 +36,7 @@ def _git_sha_short() -> str | None:
         return None
     
 def make_model_version() -> str:
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     sha = _git_sha_short()
     return f"{ts}_{sha}" if sha else ts
 
@@ -66,7 +68,7 @@ def train_logistic() -> dict:
     )
 
     preprocess = build_preprocess_pipeline()
-    model =  LogisticRegression(max_iter=1000, solver="lbfgs")
+    model =  LogisticRegression(max_iter=1000, solver="lbfgs", random_state=42)
 
     pipeline = Pipeline(
         steps=[
@@ -98,11 +100,21 @@ def save_artifacts(result: dict, version: str) -> None:
 
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, default="logistic")
+    return parser.parse_args()
+
 
 
 def main():
+    args = parse_args()
+    if args.model != "logistic":
+        raise ValueError("Only --model logistic is supported in baseline step.")
     version = make_model_version()
     result = train_logistic()
     save_artifacts(result, version)
+
+
 if __name__ == "__main__":
-    main()
+       main()

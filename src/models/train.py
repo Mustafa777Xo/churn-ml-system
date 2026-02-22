@@ -20,6 +20,7 @@ from sklearn.pipeline import Pipeline
 
 from src.data.load import load_clean_data
 from src.features.pipeline import build_preprocess_pipeline
+from src.models.threshold import find_optimal_threshold
 
 import argparse
 
@@ -113,29 +114,32 @@ def train_logistic() -> dict:
     df = load_clean_data(training=True)
     X = df.drop(columns=["Churn"])
     y = df["Churn"]
-
     X_train, X_valid, y_train, y_valid = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
-
     preprocess = build_preprocess_pipeline()
     model = LogisticRegression(max_iter=1000, solver="lbfgs", random_state=42)
-
     pipeline = Pipeline(
         steps=[
             ("preprocess", preprocess),
-            ("model", model)
+            ("model", model),
         ]
     )
-
     pipeline.fit(X_train, y_train)
-
     y_proba = pipeline.predict_proba(X_valid)[:, 1]
     metrics = compute_metrics(y_valid, y_proba, threshold=0.5)
-
+    best_threshold, threshold_report = find_optimal_threshold(
+        y_valid, y_proba, fn_cost=5, fp_cost=1
+    )
     return {
+        "model_type": "logistic",
         "pipeline": pipeline,
         "metrics": metrics,
+        "threshold": best_threshold,
+        "threshold_report": threshold_report,
+        "fn_cost": 5,
+        "fp_cost": 1,
+        "feature_list": list(X.columns),
         "n_train": len(X_train),
         "n_valid": len(X_valid),
     }
@@ -145,33 +149,36 @@ def train_xgboost(cv_folds: int = 3) -> dict:
     df = load_clean_data(training=True)
     X = df.drop(columns=["Churn"])
     y = df["Churn"]
-
     X_train, X_valid, y_train, y_valid = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
-
     preprocess = build_preprocess_pipeline()
     model = build_xgb_model()
-
     pipeline = Pipeline(
         steps=[
             ("preprocess", preprocess),
-            ("model", model)
+            ("model", model),
         ]
     )
     cv_metrics = crossval_metrics(
         preprocess, model, X_train, y_train, n_splits=cv_folds)
-    # Fit on train split for validation metrics
     pipeline.fit(X_train, y_train)
     y_proba = pipeline.predict_proba(X_valid)[:, 1]
     metrics = compute_metrics(y_valid, y_proba, threshold=0.5)
-    # Final fit on full data for the saved artifact
+    best_threshold, threshold_report = find_optimal_threshold(
+        y_valid, y_proba, fn_cost=5, fp_cost=1
+    )
     pipeline.fit(X, y)
     return {
         "model_type": "xgboost",
         "pipeline": pipeline,
         "metrics": metrics,
         "cv_metrics": cv_metrics,
+        "threshold": best_threshold,
+        "threshold_report": threshold_report,
+        "fn_cost": 5,
+        "fp_cost": 1,
+        "feature_list": list(X.columns),
         "n_train": len(X_train),
         "n_valid": len(X_valid),
     }
@@ -195,8 +202,34 @@ def save_artifacts(result: dict, version: str) -> None:
     model_dir.mkdir(parents=True, exist_ok=True)
     report_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(result["pipeline"], model_dir / "model.joblib")
+    # Metrics report
+    metrics_payload = {
+        "model_type": result.get("model_type"),
+        "metrics": result.get("metrics"),
+        "cv_metrics": result.get("cv_metrics"),
+        "n_train": result.get("n_train"),
+        "n_valid": result.get("n_valid"),
+    }
     metrics_path = report_dir / "metrics.json"
-    pd.Series(result["metrics"]).to_json(metrics_path, indent=2)
+    with metrics_path.open("w", encoding="utf-8") as f:
+        json.dump(metrics_payload, f, indent=2)
+    # Threshold report
+    if "threshold_report" in result:
+        result["threshold_report"].to_csv(
+            report_dir / "threshold_report.csv", index=False
+        )
+    # Model metadata for inference
+    metadata = {
+        "model_type": result.get("model_type"),
+        "threshold": result.get("threshold"),
+        "fn_cost": result.get("fn_cost"),
+        "fp_cost": result.get("fp_cost"),
+        "feature_list": result.get("feature_list"),
+        "trained_at": version,
+    }
+    metadata_path = model_dir / "metadata.json"
+    with metadata_path.open("w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
 
 
 def parse_args():

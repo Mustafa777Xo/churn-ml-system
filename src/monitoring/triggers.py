@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta,  timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -9,9 +9,8 @@ def load_json(path: Path) -> dict:
 
 
 def parse_trained_at(version: str) -> datetime:
-    # trained_at format: YYYYMMDD_HHMMSS or YYYYMMDD_HHMMSS_sha
     ts = "_".join(version.split("_")[:2])
-    return datetime.strptime(ts, "%Y%m%d_%H%M%S")
+    return datetime.strptime(ts, "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
 
 
 def should_retrain(

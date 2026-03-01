@@ -61,6 +61,14 @@ python -m src.monitoring.drift --reference data/processed/reference.csv --curren
 python -m src.monitoring.triggers --drift reports/drift_report.json --metadata models/<version>/metadata.json
 ```
 
+## Risk analysis
+
+- Class imbalance: Churn is a minority class, so PR-AUC is the primary metric to reflect minority performance.
+- Data drift: Behavior and product mix can shift; a drift report is generated and used as a retraining trigger.
+- Training-serving skew: The same clean_data() and preprocessing pipeline are used in training and inference.
+- Feature availability: Inference requires the same raw features; schema validation rejects missing or invalid fields.
+- Overfitting: Baseline vs XGBoost comparison, CV metrics, and mild tuning reduce overfit risk.
+
 ## Tests
 
 ```bash

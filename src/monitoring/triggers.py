@@ -1,3 +1,4 @@
+import argparse
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,3 +30,25 @@ def should_retrain(
         if datetime.now(timezone.utc) - trained_dt > timedelta(days=max_age_days):
             reasons.append("model_age_exceeded")
     return {"should_retrain": len(reasons) > 0, "reasons": reasons}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--drift", required=True, help="Path to drift_report.json")
+    parser.add_argument("--metadata", required=True, help="Path to metadata.json")
+    parser.add_argument("--max-age-days", type=int, default=30)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    decision = should_retrain(
+        drift_report_path=Path(args.drift),
+        metadata_path=Path(args.metadata),
+        max_age_days=args.max_age_days,
+    )
+    print(json.dumps(decision, indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,6 @@
 import argparse
 import json
+from pathlib import Path
 
 import pandas as pd
 from evidently import Report
@@ -21,7 +22,11 @@ def main():
     args = parse_args()
 
     # load reference (cleaned, pre-one-hot)
-    ref = pd.read_parquet(args.reference)
+    reference_path = Path(args.reference)
+    if reference_path.suffix == ".parquet":
+        ref = pd.read_parquet(reference_path)
+    else:
+        ref = pd.read_csv(reference_path)
 
     # load current batch and clean it
     curr_raw = pd.read_csv(args.current)

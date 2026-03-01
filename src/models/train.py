@@ -30,6 +30,7 @@ import argparse
 # model path and version
 MODELS_DIR = Path("models")
 REPORTS_DIR = Path("reports")
+REFERENCE_PATH = Path("data/processed/reference.csv")
 
 
 def _git_sha_short() -> str | None:
@@ -236,6 +237,14 @@ def save_artifacts(result: dict, version: str) -> None:
         json.dump(metadata, f, indent=2)
 
 
+def save_reference_data() -> None:
+    df = load_clean_data(training=True)
+    if "Churn" in df.columns:
+        df = df.drop(columns=["Churn"])
+    REFERENCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(REFERENCE_PATH, index=False)
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str,
@@ -247,6 +256,7 @@ def parse_args():
 def main():
     args = parse_args()
     version = make_model_version()
+    save_reference_data()
     if args.model == "logistic":
         result = train_logistic()
     elif args.model == "xgboost":

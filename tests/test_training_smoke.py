@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from src.models import train as train_module
 
@@ -80,3 +81,48 @@ def test_train_logistic_smoke(tmp_path, monkeypatch):
     assert metadata_path.exists()
     assert metrics_path.exists()
     assert threshold_path.exists()
+
+
+def test_train_xgboost_smoke(tmp_path, monkeypatch):
+    try:
+        from xgboost import XGBClassifier
+    except Exception as exc:
+        pytest.skip(f"xgboost not available: {exc}")
+
+    def tiny_xgb_model():
+        return XGBClassifier(
+            n_estimators=10,
+            max_depth=3,
+            learning_rate=0.1,
+            subsample=0.9,
+            colsample_bytree=0.9,
+            random_state=42,
+            eval_metric="aucpr",
+            tree_method="hist",
+            n_jobs=1,
+        )
+
+    monkeypatch.setattr(train_module, "load_clean_data", lambda training=True: make_clean_df())
+    monkeypatch.setattr(train_module, "MODELS_DIR", tmp_path / "models")
+    monkeypatch.setattr(train_module, "REPORTS_DIR", tmp_path / "reports")
+    monkeypatch.setattr(train_module, "build_xgb_model", tiny_xgb_model)
+
+    result = train_module.train_xgboost(cv_folds=2)
+    train_module.save_artifacts(result, "test_version_xgb")
+
+    report_dir = tmp_path / "reports" / "test_version_xgb"
+    train_module.save_feature_importance(
+        result["pipeline"], report_dir / "feature_importance.csv"
+    )
+
+    model_path = tmp_path / "models" / "test_version_xgb" / "model.joblib"
+    metadata_path = tmp_path / "models" / "test_version_xgb" / "metadata.json"
+    metrics_path = report_dir / "metrics.json"
+    threshold_path = report_dir / "threshold_report.csv"
+    fi_path = report_dir / "feature_importance.csv"
+
+    assert model_path.exists()
+    assert metadata_path.exists()
+    assert metrics_path.exists()
+    assert threshold_path.exists()
+    assert fi_path.exists()

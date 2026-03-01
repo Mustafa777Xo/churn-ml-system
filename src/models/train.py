@@ -5,6 +5,7 @@ import joblib
 import pandas as pd
 import numpy as np
 import json
+from typing import TYPE_CHECKING
 
 from sklearn.base import clone
 from sklearn.linear_model import LogisticRegression
@@ -13,7 +14,8 @@ from sklearn.metrics import (
     roc_auc_score,
     precision_recall_fscore_support
 )
-from xgboost import XGBClassifier
+if TYPE_CHECKING:
+    from xgboost import XGBClassifier
 
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.pipeline import Pipeline
@@ -66,7 +68,9 @@ def compute_metrics(y_true, y_proba, threshold: float = 0.5) -> dict:
     }
 
 
-def build_xgb_model() -> XGBClassifier:
+def build_xgb_model() -> "XGBClassifier":
+    from xgboost import XGBClassifier
+
     return XGBClassifier(
         n_estimators=300,
         max_depth=4,
